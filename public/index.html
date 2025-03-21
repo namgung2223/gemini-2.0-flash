@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 이미지 생성기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        /* 📌 전체 컨테이너 */
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        /* 📌 왼쪽 채팅 컨테이너 */
+        .chat-container {
+            width: 65%;
+            max-width: 700px;
+            min-height: 600px;
+            max-height: 700px;
+            padding: 20px;
+            font-size: 1.1em;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        /* 📌 오른쪽 입력 컨테이너 */
+        .input-container {
+            width: 35%;
+            max-width: 400px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            margin-left: 20px;
+            text-align: left;
+        }
+
+        /* 📌 채팅 스타일 */
+        .chat-bubble {
+            padding: 15px;
+            font-size: 1.2em;
+            max-width: 90%;
+            background: #e1f5fe;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+
+        .chat-bubble.user {
+            align-self: flex-end;
+            background: #bbdefb;
+        }
+
+        .chat-bubble img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            display: block;
+            margin: 10px 0;
+        }
+
+        /* 📌 입력 필드 스타일 */
+        input,
+        textarea,
+        button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        textarea {
+            height: 50px;
+            font-size: 1.1em;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>AI 이미지 생성기</h2>
+
+    <div class="chat-container" id="chatBox">
+        <div class="chat-bubble">📢 AI에게 요청할 내용을 입력하세요.</div>
+    </div>
+
+    <div class="input-container">
+        <!-- 이미지 업로드 -->
+        <input type="file" id="imageInput" accept="image/png, image/jpeg">
+
+        <!-- 프롬프트 입력 -->
+        <textarea id="promptText" placeholder="AI에게 요청할 설명을 입력하세요..." rows="2"></textarea>
+
+        <!-- 업로드 버튼 -->
+        <button onclick="uploadImage()">업로드 및 생성</button>
+    </div>
+
+    <script>
+        // 이미지 미리보기 기능 (채팅 스타일)
+        document.getElementById("imageInput").addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    addChatBubble("user", `<img src="${e.target.result}" alt="미리보기">`);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 채팅 메시지 추가 함수
+        function addChatBubble(sender, content) {
+            const chatBox = document.getElementById("chatBox");
+            const bubble = document.createElement("div");
+            bubble.classList.add("chat-bubble");
+            if (sender === "user") bubble.classList.add("user");
+            bubble.innerHTML = content;
+            chatBox.appendChild(bubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 이미지 업로드 및 AI 요청
+        let lastGeneratedImage = null; // 이전 AI 생성 이미지 저장
+
+        async function uploadImage() {
+            const fileInput = document.getElementById("imageInput").files[0];
+            const promptText = document.getElementById("promptText").value;
+
+            if (!fileInput && !lastGeneratedImage) {
+                alert("이미지를 선택하세요.");
+                return;
+            }
+            if (!promptText) {
+                alert("프롬프트 설명을 입력하세요.");
+                return;
+            }
+
+            addChatBubble("user", `<p>📝 ${promptText}</p>`);
+
+            const formData = new FormData();
+
+            if (lastGeneratedImage) {
+                // AI가 생성한 이미지 사용
+                formData.append("baseImage", lastGeneratedImage);
+            } else {
+                formData.append("image", fileInput);
+            }
+
+            formData.append("prompt", promptText);
+
+            try {
+                const response = await fetch("/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+                console.log("✅ 이미지 생성 성공");
+
+                if (data.imageUrl.base64Image) {
+                    lastGeneratedImage = data.imageUrl.base64Image; // 새로운 AI 생성 이미지 저장
+                    addChatBubble("ai", `<p>✅ AI가 생성한 이미지:</p><img src="${data.imageUrl.base64Image}" alt="AI 생성 이미지" style="max-width: 400px;">`);
+                } else {
+                    alert("이미지 생성 실패: " + data.error);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("서버 오류 발생");
+            }
+        }
+    </script>
+</body>
+
+</html>

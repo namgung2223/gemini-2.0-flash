@@ -1,0 +1,23 @@
+{
+  "name": "vueapi",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "build": "echo 'No build step defined'",
+    "test": "echo 'No tests defined'",
+    "postinstall": "npm install",
+    "changelog": "echo 'Changelog not configured'",
+    "publish": "echo 'Publish script not configured'"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "multer": "^1.4.5-lts.2"
+  }
+}
